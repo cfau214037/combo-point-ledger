@@ -1,9 +1,12 @@
 local addonName, ledger = ...
 
 local MAX_POINTS = 5
-local WHITE = "Interface\\Buttons\\WHITE8X8"
 local TEXTURES = "Interface\\AddOns\\" .. addonName .. "\\Textures\\"
 local DEFAULT_Y = -105
+local RED_SHADE = CreateColor(0.44, 0.015, 0.035, 1)
+local RED_LIGHT = CreateColor(0.86, 0.10, 0.13, 1)
+local GOLD_SHADE = CreateColor(0.55, 0.34, 0.15, 1)
+local GOLD_LIGHT = CreateColor(0.88, 0.71, 0.46, 1)
 local db, editing, moving
 
 ledger.styles = { "Dots", "Ticks", "Number" }
@@ -56,19 +59,21 @@ for i = 1, MAX_POINTS do
     slot:SetSize(16, 16)
     slot:SetPoint("CENTER", (i - 3) * 17, 0)
 
-    local empty = texture(slot, "BACKGROUND")
-    empty:SetVertexColor(0.68, 0.70, 0.75, 0.52)
+    local backing = texture(slot, "BACKGROUND")
+    backing:SetVertexColor(0.04, 0.025, 0.02, 0.96)
+    local empty = texture(slot, "BORDER")
+    empty:SetVertexColor(0.48, 0.33, 0.17, 0.9)
 
     local full = CreateFrame("Frame", nil, slot)
     full:SetAllPoints()
     local gold = texture(full, "ARTWORK")
-    gold:SetVertexColor(1, 0.68, 0.19)
+    gold:SetVertexColor(0.99, 0.79, 0.46)
 
     local active = CreateFrame("Frame", nil, slot)
     active:SetAllPoints()
     active:SetFrameLevel(full:GetFrameLevel() + 1)
+    local rim = texture(active, "BORDER")
     local fill = texture(active, "ARTWORK")
-    fill:SetVertexColor(1, 0.96, 0.84)
 
     -- The engine evaluates these thresholds even when the count is secret.
     local curve = C_CurveUtil.CreateCurve()
@@ -77,7 +82,10 @@ for i = 1, MAX_POINTS do
     curve:AddPoint(i, 1)
     if i < MAX_POINTS then curve:AddPoint(MAX_POINTS, 1) end
 
-    dots[i] = { empty = empty, fill = fill, gold = gold, active = active, full = full, curve = curve }
+    dots[i] = {
+        backing = backing, empty = empty, rim = rim, fill = fill,
+        gold = gold, active = active, full = full, curve = curve,
+    }
 end
 
 local function render()
@@ -126,25 +134,35 @@ end)
 hud:SetScript("OnDragStop", stopMoving)
 
 local events = CreateFrame("Frame")
-local function refreshVisibility()
-    local visible = db.show or editing
+local function refreshVisibility(inCombat)
+    local visible = editing or (db.show and inCombat) or false
     hud:SetShown(visible)
     events:UnregisterAllEvents()
-    if visible and not editing then
+    if db.show and not editing then
         events:RegisterEvent("PLAYER_ENTERING_WORLD")
-        events:RegisterEvent("PLAYER_TARGET_CHANGED")
         events:RegisterEvent("PLAYER_REGEN_DISABLED")
         events:RegisterEvent("PLAYER_REGEN_ENABLED")
-        if C_EventUtils.IsEventValid("UNIT_COMBO_POINTS") then
-            events:RegisterEvent("UNIT_COMBO_POINTS")
+        if inCombat then
+            events:RegisterEvent("PLAYER_TARGET_CHANGED")
+            if C_EventUtils.IsEventValid("UNIT_COMBO_POINTS") then
+                events:RegisterEvent("UNIT_COMBO_POINTS")
+            end
+            events:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+            events:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
         end
-        events:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-        events:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
     end
     render()
 end
 
 events:SetScript("OnEvent", function(_, event, unit, powerType)
+    if event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
+        refreshVisibility(event == "PLAYER_REGEN_DISABLED")
+        return
+    end
+    if event == "PLAYER_ENTERING_WORLD" then
+        refreshVisibility(InCombatLockdown())
+        return
+    end
     if event == "UNIT_POWER_FREQUENT" or event == "UNIT_POWER_UPDATE" then
         if powerType ~= "COMBO_POINTS" then return end
     end
@@ -157,7 +175,7 @@ end
 
 function ledger.SetHUDShown(shown)
     db.show = shown
-    refreshVisibility()
+    refreshVisibility(InCombatLockdown())
     ledger.RefreshControls()
 end
 
@@ -171,19 +189,31 @@ function ledger.SetStyle(style)
     marks:SetShown(style ~= "Number")
     for _, dot in ipairs(dots) do
         if style == "Dots" then
+            dot.backing:SetTexture(TEXTURES .. "Dot")
+            dot.backing:SetSize(24, 24)
             dot.empty:SetTexture(TEXTURES .. "Ring")
+            dot.empty:SetSize(14, 14)
+            dot.rim:SetTexture(TEXTURES .. "Ring")
+            dot.rim:SetSize(16, 16)
             dot.fill:SetTexture(TEXTURES .. "Dot")
+            dot.fill:SetSize(14, 14)
             dot.gold:SetTexture(TEXTURES .. "Ring")
-            dot.empty:SetSize(15, 15)
-            dot.fill:SetSize(15, 15)
-            dot.gold:SetSize(15, 15)
+            dot.gold:SetSize(17, 17)
         elseif style == "Ticks" then
-            dot.empty:SetTexture(WHITE)
-            dot.fill:SetTexture(WHITE)
-            dot.gold:SetTexture(WHITE)
-            dot.empty:SetSize(13, 5)
-            dot.fill:SetSize(11, 3)
-            dot.gold:SetSize(13, 5)
+            dot.backing:SetTexture(TEXTURES .. "Tick")
+            dot.backing:SetSize(14, 10)
+            dot.empty:SetTexture(TEXTURES .. "TickRing")
+            dot.empty:SetSize(12, 8)
+            dot.rim:SetTexture(TEXTURES .. "Tick")
+            dot.rim:SetSize(12, 8)
+            dot.fill:SetTexture(TEXTURES .. "Tick")
+            dot.fill:SetSize(9, 5)
+            dot.gold:SetTexture(TEXTURES .. "Tick")
+            dot.gold:SetSize(13, 9)
+        end
+        if style ~= "Number" then
+            dot.rim:SetGradient("VERTICAL", GOLD_SHADE, GOLD_LIGHT)
+            dot.fill:SetGradient("VERTICAL", RED_SHADE, RED_LIGHT)
         end
     end
     ledger.SetScale(db.scale)
@@ -213,7 +243,7 @@ function ledger.SetEditing(enabled)
     editing = enabled
     hud:EnableMouse(enabled)
     editBackground:SetShown(enabled)
-    refreshVisibility()
+    refreshVisibility(InCombatLockdown())
 end
 
 local function numberOr(value, default)

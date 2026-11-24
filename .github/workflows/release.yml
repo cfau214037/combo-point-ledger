@@ -4,12 +4,20 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag matching the addon version
+        required: true
+        type: string
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -18,7 +26,7 @@ jobs:
       - name: Build addon ZIP
         shell: pwsh
         run: |
-          $tag = $env:GITHUB_REF_NAME
+          $tag = $env:RELEASE_TAG
           if ($tag -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {
             throw "Expected a release tag like v0.1.0, got '$tag'."
           }
@@ -31,9 +39,17 @@ jobs:
 
           Compress-Archive -Path ComboPointLedger -DestinationPath "ComboPointLedger-$tag.zip"
 
+      - name: Create release tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$GITHUB_SHA"
+
       - name: Publish ZIP on GitHub
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "ComboPointLedger-$GITHUB_REF_NAME.zip" \
-            --verify-tag --title "Combo Point Ledger $GITHUB_REF_NAME" --generate-notes
+          gh release create "$RELEASE_TAG" "ComboPointLedger-$RELEASE_TAG.zip" \
+            --verify-tag --title "Combo Point Ledger $RELEASE_TAG" --generate-notes

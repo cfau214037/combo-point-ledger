@@ -3,10 +3,12 @@ local addonName, ledger = ...
 local MAX_POINTS = 5
 local TEXTURES = "Interface\\AddOns\\" .. addonName .. "\\Textures\\"
 local DEFAULT_Y = -105
-local RED_SHADE = CreateColor(0.44, 0.015, 0.035, 1)
-local RED_LIGHT = CreateColor(0.86, 0.10, 0.13, 1)
-local GOLD_SHADE = CreateColor(0.55, 0.34, 0.15, 1)
-local GOLD_LIGHT = CreateColor(0.88, 0.71, 0.46, 1)
+local RED_SHADE = CreateColor(0.47, 0.008, 0.017, 1)
+local RED_LIGHT = CreateColor(0.81, 0.055, 0.060, 1)
+local GOLD_SHADE = CreateColor(0.43, 0.25, 0.09, 1)
+local GOLD_LIGHT = CreateColor(0.86, 0.66, 0.37, 1)
+local FULL_GOLD_SHADE = CreateColor(0.50, 0.28, 0.09, 1)
+local FULL_GOLD_LIGHT = CreateColor(0.90, 0.69, 0.37, 1)
 local db, editing, moving
 
 ledger.styles = { "Dots", "Ticks", "Number" }
@@ -67,7 +69,6 @@ for i = 1, MAX_POINTS do
     local full = CreateFrame("Frame", nil, slot)
     full:SetAllPoints()
     local gold = texture(full, "ARTWORK")
-    gold:SetVertexColor(0.99, 0.79, 0.46)
 
     local active = CreateFrame("Frame", nil, slot)
     active:SetAllPoints()
@@ -196,24 +197,25 @@ function ledger.SetStyle(style)
             dot.rim:SetTexture(TEXTURES .. "Ring")
             dot.rim:SetSize(16, 16)
             dot.fill:SetTexture(TEXTURES .. "Dot")
-            dot.fill:SetSize(14, 14)
+            dot.fill:SetSize(16.5, 16.5)
             dot.gold:SetTexture(TEXTURES .. "Ring")
-            dot.gold:SetSize(17, 17)
+            dot.gold:SetSize(16.5, 16.5)
         elseif style == "Ticks" then
             dot.backing:SetTexture(TEXTURES .. "Tick")
             dot.backing:SetSize(14, 10)
             dot.empty:SetTexture(TEXTURES .. "TickRing")
-            dot.empty:SetSize(12, 8)
+            dot.empty:SetSize(11, 7)
             dot.rim:SetTexture(TEXTURES .. "Tick")
-            dot.rim:SetSize(12, 8)
+            dot.rim:SetSize(11, 7)
             dot.fill:SetTexture(TEXTURES .. "Tick")
             dot.fill:SetSize(9, 5)
             dot.gold:SetTexture(TEXTURES .. "Tick")
-            dot.gold:SetSize(13, 9)
+            dot.gold:SetSize(12, 8)
         end
         if style ~= "Number" then
             dot.rim:SetGradient("VERTICAL", GOLD_SHADE, GOLD_LIGHT)
             dot.fill:SetGradient("VERTICAL", RED_SHADE, RED_LIGHT)
+            dot.gold:SetGradient("VERTICAL", FULL_GOLD_SHADE, FULL_GOLD_LIGHT)
         end
     end
     ledger.SetScale(db.scale)

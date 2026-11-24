@@ -1,0 +1,11 @@
+## Interface: 16001
+## Game: forever
+## Title: Combo Point Ledger
+## Notes: A compact, movable combo-point HUD for rogues.
+## Author: Chris
+## Version: 0.1.0
+## IconTexture: 132292
+## SavedVariables: ComboPointLedgerDB
+
+HUD.lua
+Controls.lua

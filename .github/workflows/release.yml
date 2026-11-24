@@ -1,0 +1,39 @@
+name: Build addon release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build addon ZIP
+        shell: pwsh
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          if ($tag -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {
+            throw "Expected a release tag like v0.1.0, got '$tag'."
+          }
+
+          $manifest = 'ComboPointLedger/ComboPointLedger_Forever.toc'
+          $versionLine = Select-String -LiteralPath $manifest -Pattern '^## Version: *(.+)$'
+          if (-not $versionLine -or $tag -cne ('v' + $versionLine.Matches[0].Groups[1].Value.Trim())) {
+            throw "The version in $manifest must match tag $tag."
+          }
+
+          Compress-Archive -Path ComboPointLedger -DestinationPath "ComboPointLedger-$tag.zip"
+
+      - name: Publish ZIP on GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "ComboPointLedger-$GITHUB_REF_NAME.zip" \
+            --verify-tag --title "Combo Point Ledger $GITHUB_REF_NAME" --generate-notes

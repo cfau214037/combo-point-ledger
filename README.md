@@ -12,4 +12,4 @@ The HUD updates in response to combo-point and target changes. It uses WoW's UI 
 
 ## Publishing a release
 
-Set `## Version` in `ComboPointLedger/ComboPointLedger_Forever.toc` and push the commit. Push the matching tag, such as `v0.1.1`, or use **Actions → Build addon release → Run workflow** and enter the tag to create it from the selected branch. GitHub Actions publishes the release and attaches `ComboPointLedger-v0.1.1.zip`. The ZIP contains the `ComboPointLedger` addon folder ready to extract into `Interface/AddOns`.
+Set `## Version` in `ComboPointLedger/ComboPointLedger_Forever.toc` and push the commit. Push the matching tag, such as `v0.1.1`, or use **Actions → Build addon release → Run workflow** and enter the tag to create it from the selected branch. Creating a branch named `release/v0.1.1` also triggers the workflow. GitHub Actions publishes the release and attaches `ComboPointLedger-v0.1.1.zip`. The ZIP contains the `ComboPointLedger` addon folder ready to extract into `Interface/AddOns`.

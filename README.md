@@ -4,9 +4,9 @@ A lightweight rogue combo-point HUD for World of Warcraft: Forever. It starts ju
 
 Copy the `ComboPointLedger` folder into `World of Warcraft/_forever_/Interface/AddOns/` and start the client. Open the settings with `/cpl` or left-click the minimap icon.
 
-- Choose **Dots**, **Ticks**, or **Number** under **Display Style**. Dots and ticks use red fills with gold trim. All styles highlight five combo points in gold.
+- Choose **Dots**, **Ticks**, or **Number** under **Display Style**. Filled dots and ticks use marbled amber centers with dark bronze rims. All three styles brighten at five combo points.
 - Select **Edit HUD** to preview five points, drag the HUD, or adjust the size. Select **Lock HUD** or press Escape to save your placement. The locked HUD lets clicks pass through.
-- Toggle **Show HUD** in settings or from the minimap icon's right-click menu. The enabled HUD appears in combat and hides when combat ends. **Edit HUD** is available out of combat. Style, size, and position persist across sessions.
+- Toggle **Show HUD** in settings or from the minimap icon's right-click menu. The HUD appears in combat or anytime your current target has combo points, including points from Premeditation. **Edit HUD** is available out of combat. Style, size, and position persist across sessions.
 
 The HUD updates in response to combo-point and target changes. It uses WoW's UI widgets to render restricted combat values directly.
 

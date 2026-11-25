@@ -3,11 +3,13 @@ local addonName, ledger = ...
 local MAX_POINTS = 5
 local TEXTURES = "Interface\\AddOns\\" .. addonName .. "\\Textures\\"
 local DEFAULT_Y = -105
+local NAMEPLATE_GAP = 4
 local AMBER_LIGHT = CreateColor(1, 0.70, 0.14, 1)
 local FULL_AMBER_LIGHT = CreateColor(1, 0.90, 0.46, 1)
 local db, editing, moving, inCombat
 
 ledger.styles = { "Dots", "Ticks", "Number" }
+ledger.placements = { "Screen HUD", "Target Nameplate" }
 ledger.minScale, ledger.maxScale = 0.6, 2
 
 local hud = CreateFrame("Frame", nil, UIParent)
@@ -121,6 +123,38 @@ local function position()
     hud:SetPoint("CENTER", UIParent, "CENTER", db.x, db.y)
 end
 
+local function updatePlacement()
+    if not editing and not db.show then
+        hud:Hide()
+        return
+    end
+
+    if editing or not ledger.IsNameplatePlacement() then
+        hud:SetParent(UIParent)
+        hud:SetClampedToScreen(true)
+        if not moving then position() end
+        hud:Show()
+    else
+        local plate = UnitCanAttack("player", "target") and C_NamePlate.GetNamePlateForUnit("target")
+        if not plate or plate:IsForbidden() then
+            hud:Hide()
+            hud:ClearAllPoints()
+            hud:SetParent(UIParent)
+            return
+        end
+
+        local unitFrame = plate.UnitFrame
+        local health = unitFrame and not unitFrame:IsForbidden() and unitFrame.HealthBarsContainer
+        local anchor = health and not health:IsForbidden() and health or plate
+        hud:SetParent(plate)
+        hud:SetClampedToScreen(false)
+        hud:ClearAllPoints()
+        hud:SetPoint("BOTTOM", anchor, "TOP", 0, NAMEPLATE_GAP)
+        hud:Show()
+    end
+    render()
+end
+
 local function stopMoving()
     if not moving then return end
     moving = false
@@ -132,7 +166,7 @@ local function stopMoving()
 end
 
 hud:SetScript("OnDragStart", function()
-    if editing then
+    if editing and not ledger.IsNameplatePlacement() then
         moving = true
         hud:StartMoving()
     end
@@ -140,22 +174,26 @@ end)
 hud:SetScript("OnDragStop", stopMoving)
 
 local events = CreateFrame("Frame")
+local removalPending
 local function refreshVisibility()
     inCombat = InCombatLockdown()
-    hud:SetShown(editing or db.show)
     events:UnregisterAllEvents()
     if db.show and not editing then
         events:RegisterEvent("PLAYER_ENTERING_WORLD")
         events:RegisterEvent("PLAYER_REGEN_DISABLED")
         events:RegisterEvent("PLAYER_REGEN_ENABLED")
         events:RegisterEvent("PLAYER_TARGET_CHANGED")
+        if ledger.IsNameplatePlacement() then
+            events:RegisterEvent("NAME_PLATE_UNIT_ADDED")
+            events:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
+        end
         if C_EventUtils.IsEventValid("UNIT_COMBO_POINTS") then
             events:RegisterEvent("UNIT_COMBO_POINTS")
         end
         events:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
         events:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
     end
-    render()
+    updatePlacement()
 end
 
 events:SetScript("OnEvent", function(_, event, unit, powerType)
@@ -163,10 +201,24 @@ events:SetScript("OnEvent", function(_, event, unit, powerType)
         inCombat = event == "PLAYER_REGEN_DISABLED"
     elseif event == "PLAYER_ENTERING_WORLD" then
         inCombat = InCombatLockdown()
+    elseif event == "NAME_PLATE_UNIT_REMOVED" then
+        -- Let the client finish removing or recycling the plate before looking it up again.
+        if not removalPending then
+            removalPending = true
+            C_Timer.After(0, function()
+                removalPending = false
+                updatePlacement()
+            end)
+        end
+        return
     elseif event == "UNIT_POWER_FREQUENT" or event == "UNIT_POWER_UPDATE" then
         if powerType ~= "COMBO_POINTS" then return end
     end
-    render()
+    if event == "PLAYER_TARGET_CHANGED" or event == "NAME_PLATE_UNIT_ADDED" or event == "PLAYER_ENTERING_WORLD" then
+        updatePlacement()
+    else
+        render()
+    end
 end)
 
 function ledger.IsHUDShown()
@@ -177,6 +229,21 @@ function ledger.SetHUDShown(shown)
     db.show = shown
     refreshVisibility()
     ledger.RefreshControls()
+end
+
+function ledger.IsNameplatePlacement()
+    return db.placement == "Target Nameplate"
+end
+
+function ledger.GetPlacement()
+    return db.placement
+end
+
+function ledger.SetPlacement(placement)
+    stopMoving()
+    db.placement = placement
+    hud:EnableMouse(editing and not ledger.IsNameplatePlacement())
+    refreshVisibility()
 end
 
 function ledger.GetStyle()
@@ -237,7 +304,7 @@ function ledger.SetEditing(enabled)
     if editing == enabled then return end
     stopMoving()
     editing = enabled
-    hud:EnableMouse(enabled)
+    hud:EnableMouse(enabled and not ledger.IsNameplatePlacement())
     editBackground:SetShown(enabled)
     refreshVisibility()
 end
@@ -252,6 +319,9 @@ end
 function ledger.InitializeHUD(saved)
     db = saved
     db.show = db.show ~= false
+    if not ledger.IsNameplatePlacement() then
+        db.placement = "Screen HUD"
+    end
     if db.style ~= "Dots" and db.style ~= "Ticks" and db.style ~= "Number" then
         db.style = "Dots"
     end

@@ -5,7 +5,7 @@ A lightweight rogue combo-point HUD for World of Warcraft: Forever. It starts ju
 Copy the `ComboPointLedger` folder into `World of Warcraft/_forever_/Interface/AddOns/` and start the client. Open the settings with `/cpl` or left-click the minimap icon.
 
 - Choose **Dots**, **Ticks**, or **Number** under **Display Style**. Filled dots and ticks use marbled amber centers with dark bronze rims. All three styles brighten at five combo points.
-- Under **Placement**, choose **Screen HUD** or **Target Nameplate**. Target Nameplate shows the combo points above your current enemy's floating health bar and hides the display when that nameplate is unavailable. Enable enemy nameplates in WoW to use it.
+- Under **Placement**, choose **Screen HUD** or **Target Nameplate**. Target Nameplate shows your selected style along the inside lower edge of your current enemy's floating health bar. Enable enemy nameplates in WoW to use it.
 - Select **Edit HUD** to preview five points and adjust the size. In Screen HUD mode, you can also drag the display. Select **Lock HUD** or press Escape to finish editing. The locked HUD lets clicks pass through.
 - Toggle **Show HUD** in settings or from the minimap icon's right-click menu. The HUD appears in combat or anytime your current target has combo points, including points from Premeditation. **Edit HUD** is available out of combat. Style, size, and position persist across sessions.
 

@@ -3,10 +3,9 @@ local addonName, ledger = ...
 local MAX_POINTS = 5
 local TEXTURES = "Interface\\AddOns\\" .. addonName .. "\\Textures\\"
 local DEFAULT_Y = -105
-local NAMEPLATE_GAP = 4
 local AMBER_LIGHT = CreateColor(1, 0.70, 0.14, 1)
 local FULL_AMBER_LIGHT = CreateColor(1, 0.90, 0.46, 1)
-local db, editing, moving, inCombat
+local db, editing, moving, inCombat, nameplateBar
 
 ledger.styles = { "Dots", "Ticks", "Number" }
 ledger.placements = { "Screen HUD", "Target Nameplate" }
@@ -124,6 +123,7 @@ local function position()
 end
 
 local function updatePlacement()
+    nameplateBar = nil
     if not editing and not db.show then
         hud:Hide()
         return
@@ -136,22 +136,26 @@ local function updatePlacement()
         hud:Show()
     else
         local plate = UnitCanAttack("player", "target") and C_NamePlate.GetNamePlateForUnit("target")
-        if not plate or plate:IsForbidden() then
+        local unitFrame = plate and not plate:IsForbidden() and plate.UnitFrame
+        if unitFrame and not unitFrame:IsForbidden() then
+            local health = unitFrame.HealthBarsContainer
+            local bar = (health and not health:IsForbidden() and health.healthBar) or unitFrame.healthBar
+            if bar and not bar:IsForbidden() then nameplateBar = bar end
+        end
+        if not nameplateBar then
             hud:Hide()
             hud:ClearAllPoints()
             hud:SetParent(UIParent)
             return
         end
 
-        local unitFrame = plate.UnitFrame
-        local health = unitFrame and not unitFrame:IsForbidden() and unitFrame.HealthBarsContainer
-        local anchor = health and not health:IsForbidden() and health or plate
-        hud:SetParent(plate)
+        hud:SetParent(nameplateBar)
         hud:SetClampedToScreen(false)
         hud:ClearAllPoints()
-        hud:SetPoint("BOTTOM", anchor, "TOP", 0, NAMEPLATE_GAP)
+        hud:SetPoint("BOTTOM", nameplateBar, "BOTTOM", 0, 1)
         hud:Show()
     end
+    ledger.SetScale(db.scale)
     render()
 end
 
@@ -289,8 +293,24 @@ end
 
 function ledger.SetScale(scale)
     db.scale = scale
+    local numeric = db.style == "Number"
+    local width = numeric and 40 or 88
+    if ledger.IsNameplatePlacement() then
+        local barHeight, barWidth = 12, 100
+        if nameplateBar then
+            local width, height = nameplateBar:GetSize()
+            if not (issecretvalue(width) or issecretvalue(height)) and width > 0 and height > 0 then
+                barWidth, barHeight = width, height
+            end
+        end
+        local height = numeric and 28 or 16
+        local sizeRatio = numeric and 46 or 26
+        local fittedScale = math.min(barHeight * math.sqrt(scale) / sizeRatio, barWidth / width)
+        art:SetScale(fittedScale)
+        hud:SetSize(width * fittedScale, height * fittedScale)
+        return
+    end
     art:SetScale(scale)
-    local width = db.style == "Number" and 40 or 88
     hud:SetSize(width * scale, 32 * scale)
 end
 
